@@ -12,7 +12,7 @@ import org.apache.spark.sql.{Dataset, Row}
 import java.sql.Timestamp
 import scala.collection.JavaConverters._
 
-//git push test2
+//git push test3
 case class OutTable(id:Int, user_id:String,  `type`:Int, name:String, cognito_email:String, created_by:String, updated_by:String, created_at:Timestamp, updated_at:Timestamp, deleted_flg:Boolean)
 // case class OutTable(id:Int, user_id:Int,  name:String)
 object DirectJDBCSource {
