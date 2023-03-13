@@ -1,0 +1,109 @@
+import com.amazonaws.services.glue.ChoiceOption
+import com.amazonaws.services.glue.GlueContext
+import com.amazonaws.services.glue.DynamicFrame
+import com.amazonaws.services.glue.MappingSpec
+import com.amazonaws.services.glue.ResolveSpec
+import com.amazonaws.services.glue.errors.CallSite
+import com.amazonaws.services.glue.util.GlueArgParser
+import com.amazonaws.services.glue.util.Job
+import com.amazonaws.services.glue.util.JsonOptions
+import org.apache.spark.SparkContext
+import org.apache.spark.sql.{Dataset, Row}
+import java.sql.Timestamp
+import scala.collection.JavaConverters._
+
+
+case class OutTable(id:Int, user_id:String,  `type`:Int, name:String, cognito_email:String, created_by:String, updated_by:String, created_at:Timestamp, updated_at:Timestamp, deleted_flg:Boolean)
+// case class OutTable(id:Int, user_id:Int,  name:String)
+object DirectJDBCSource {
+
+  def execute(glueContext: GlueContext, connectionName: String, connectionType: String, database: String, table: String, redshiftTmpDir: String) : DynamicFrame = {
+
+    var opStr = ""
+
+    if (redshiftTmpDir == null) {
+        opStr = s"""{
+        "useConnectionProperties": "true",
+        "connectionName": "${connectionName}",
+        "dbtable": "${table}"
+        }"""
+    } else {
+        opStr = s"""{
+        "useConnectionProperties": "true",
+        "connectionName": "${connectionName}",
+        "dbtable": "${table}",
+        "redshiftTmpDir": "${redshiftTmpDir}"
+        }"""
+    }
+
+    val resultDataFrame = glueContext.getSource(
+    connectionType = connectionType,
+    connectionOptions = JsonOptions(opStr)).getDataFrame()
+
+    return DynamicFrame(resultDataFrame, glueContext)
+  }
+
+}
+object GlueApp {
+  def main(sysArgs: Array[String]) {
+    println("start context...")
+    val spark: SparkContext = new SparkContext()
+    val glueContext: GlueContext = new GlueContext(spark)
+    val session = glueContext.getSparkSession
+    import session.implicits._
+    // @params: [JOB_NAME]
+    val args = GlueArgParser.getResolvedOptions(sysArgs, Seq("JOB_NAME").toArray)
+    Job.init(args("JOB_NAME"), glueContext, args.asJava)
+    // @type: DataSource
+    // @args: [database = "chi", table_name = "chi_stg_staging_userss", transformation_ctx = "datasource0"]
+    // @return: datasource0
+    // @inputs: []
+    // val datasource0 = glueContext.getCatalogSource(database = "chi", tableName = "staging_users", redshiftTmpDir = "", transformationContext = "datasource0").getDynamicFrame()
+    // val df:Dataset[Row] = datasource0.toDF()
+    val dataSource = DirectJDBCSource.execute(glueContext = glueContext, connectionName = "stgDB", connectionType = "mysql", database = "staging", table = "staging.users", redshiftTmpDir = "")
+    println("start read data...")
+    // val df = session.read
+    //         .format("jdbc")
+    //         .option("url", "jdbc:mysql://chi-database-poc.cluster-cirq1m61pxeb.ap-northeast-1.rds.amazonaws.com:3306/staging?useUnicode=true&characterEncoding=utf-8")
+    //         .option("dbtable", "staging.users")
+    //         .option("user", "admin")
+    //         .option("password", "admin12345")
+    //         .load()
+    val df = dataSource.toDF()
+    df.show()
+    println("start data convert...")
+    val result:Dataset[OutTable] = df.map(row => {
+        val id = row.getInt(0)
+        val userId = row.getString(1)
+        val typeT = row.getInt(2)
+        val name = "マスキング　太郎"
+        val cognitoEmail = "masking@sompo-sys.com"
+        val createdBy = "損保　太郎"
+        val updatedBy = row.getString(6)
+        val createdAt = row.getTimestamp(7)
+        val updatedAt = row.getTimestamp(8)
+        val deletedFlg = row.getBoolean(9)
+        OutTable(id,userId,typeT,name,cognitoEmail,createdBy,updatedBy,createdAt,updatedAt,deletedFlg)
+    })
+    result.show()
+    println("start data write...")
+    result.write
+      .format("jdbc")
+      .option("url", "jdbc:mysql://chi-database-poc.cluster-cirq1m61pxeb.ap-northeast-1.rds.amazonaws.com:3306/staging?useUnicode=true&characterEncoding=utf-8")
+      .option("dbtable", "staging.users")
+      .option("user", "admin")
+      .option("password", "admin12345")
+      .option("truncate",true)
+      .mode("overwrite")
+      .save()
+    // val dynamicFrame = DynamicFrame(result.toDF(), glueContext)
+    // val datasink = glueContext.getJDBCSink(
+    //         catalogConnection = "stgDB", 
+    //         options = JsonOptions("""{"dbtable": "users", "database": "staging"}"""), 
+    //         redshiftTmpDir = "", 
+    //         transformationContext = "datasink")
+    //     .writeDynamicFrame(dynamicFrame)
+    result.show()
+    Job.commit()
+  }
+}
