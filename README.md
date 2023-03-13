@@ -1,0 +1,2 @@
+# AWSGlue
+Glueバージョン管理
