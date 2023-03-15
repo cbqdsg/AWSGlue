@@ -1,7 +1,7 @@
 version: 0.2
 env:
   variables:
-    TEMPLATE_BUCKET: "zhanglei-cfn"
+    TEMPLATE_BUCKET: "your-s3-bucket-for-nested-templates"
 phases:
   build:
     commands:
