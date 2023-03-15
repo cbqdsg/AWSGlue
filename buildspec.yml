@@ -1,7 +1,7 @@
 version: 0.2
 env:
   variables:
-    TEMPLATE_BUCKET: "aws-glue-scripts-634486747428-ap-northeast-1/chi"
+    TEMPLATE_BUCKET: "zhanglei-cfn"
 phases:
   build:
     commands:
