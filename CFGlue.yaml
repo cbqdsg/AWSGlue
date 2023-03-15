@@ -85,4 +85,4 @@ Resources:
       NumberOfWorkers: 2
       MaxRetries: 1
       Timeout: 2880 
-      Name: !Ref CFNJobName	    
+      Name: !Ref CFNJobName
