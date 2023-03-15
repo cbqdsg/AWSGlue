@@ -1,11 +1,12 @@
 version: 0.2
 env:
   variables:
-    TEMPLATE_BUCKET: "your-s3-bucket-for-nested-templates"
+    TEMPLATE_BUCKET: "aws-glue-scripts-634486747428-ap-northeast-1"
 phases:
   build:
     commands:
-      - aws cloudformation package --template CFGlue.yaml --s3-bucket $TEMPLATE_BUCKET --output-template-file CFGlue.yaml
+      - aws cloudformation package --template CFGlue.yaml --s3-bucket aws-glue-scripts-634486747428-ap-northeast-1 --output-template-file CFGlue.yaml
 artifacts:
   files:
     - 'CFGlue.yaml'
+    
