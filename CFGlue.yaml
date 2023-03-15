@@ -1,0 +1,88 @@
+
+---
+AWSTemplateFormatVersion: '2010-09-09'
+# Sample CFN YAML to demonstrate creating a job using a MySQL JDBC DB with the flights data to an S3 file
+#
+# Parameters section contains names that are substituted in the Resources section
+# These parameters are the names the resources created in the Data Catalog
+Parameters:  
+# The name of the connection to be created
+  CFNConnectionName:  
+    Type: String
+    Default: cf-stg-conn
+  CFNJDBCString:  
+    Type: String
+    Default: "jdbc:mysql://chi-database-poc.cluster-cirq1m61pxeb.ap-northeast-1.rds.amazonaws.com:3306/staging"
+  CFNJDBCUser:  
+    Type: String
+    Default: "admin"
+  CFNJDBCPassword:  
+    Type: String
+    Default: "admin12345"
+    NoEcho: true                                                                                                     
+# The name of the job to be created
+  CFNJobName:  
+    Type: String
+    Default: cf-glue-db
+# The name of the IAM role that the job assumes. It must have access to data, script, temporary directory
+  CFNIAMRoleName:  
+    Type: String
+    Default: arn:aws:iam::634486747428:role/service-role/AWSGlueServiceRole-zhanglei
+# The S3 path where the script for this job is located
+  CFNScriptLocation:  
+    Type: String
+    Default: s3://aws-glue-scripts-634486747428-ap-northeast-1/ZhangLei/chi_overwrite	
+#
+#
+# Resources section defines metadata for the Data Catalog
+Resources:    
+  CFNConnectionMySQL:
+    Type: AWS::Glue::Connection
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      ConnectionInput: 
+        Description: "Connect to MySQL database."
+        ConnectionType: "JDBC"
+        # MatchCriteria: none		
+        PhysicalConnectionRequirements:
+          AvailabilityZone: "ap-northeast-1"
+          SecurityGroupIdList: 
+           - "sg-05133015a0cd6368e"
+           - "sg-0083743756fb01768"
+           - "sg-08470f78d0f81fe1e"
+          SubnetId: "subnet-045831a23ed219bb6" 
+        ConnectionProperties: {
+          "JDBC_CONNECTION_URL": !Ref CFNJDBCString,
+          "USERNAME": !Ref CFNJDBCUser,
+          "PASSWORD": !Ref CFNJDBCPassword
+        }
+        Name: !Ref CFNConnectionName                                  
+# Create job to run script which accesses JDBC flights table via a connection and write to S3 file as parquet.
+# The script already exists and is called by this job	
+  CFNJobFlights:
+    Type: AWS::Glue::Job   
+    Properties:
+      # Role: !Ref CFNIAMRoleName  
+      Role: !Ref CFNIAMRoleName 
+      DefaultArguments: {'--job-language': 'scala'}  
+      # For example, if required by script, set temporary directory as DefaultArguments={'--TempDir'; 's3://aws-glue-temporary-xyc/sal'}
+      Connections:
+        Connections:
+        - !Ref CFNConnectionName 
+      GlueVersion: "3.0"
+      #MaxRetries: Double  
+      Description: Job created with CloudFormation using existing script
+      #LogUri: String  
+      Command:   
+        Name: glueetl
+        ScriptLocation: !Ref CFNScriptLocation
+             # for access to directories use proper IAM role with permission to buckets and folders that begin with "aws-glue-"					 
+             # if required, script defines temp directory as argument TempDir and used in script like redshift_tmp_dir = args["TempDir"] 
+             # script defines target for output as s3://aws-glue-target/sal
+      ExecutionProperty:
+        MaxConcurrentRuns: 1
+      WorkerType: "G.1X"
+      NumberOfWorkers: 2
+      MaxRetries: 1
+      Timeout: 2880 
+      Name: !Ref CFNJobName	    
