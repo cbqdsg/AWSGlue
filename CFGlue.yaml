@@ -31,7 +31,7 @@ Parameters:
 # The S3 path where the script for this job is located
   CFNScriptLocation:  
     Type: String
-    Default: s3://aws-glue-scripts-634486747428-ap-northeast-1/ZhangLei/chi_overwrite	
+    Default: s3://aws-glue-scripts-634486747428-ap-northeast-1/ZhangLei/chi_overwrite
 #
 #
 # Resources section defines metadata for the Data Catalog
