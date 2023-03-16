@@ -46,7 +46,7 @@ Resources:
         ConnectionType: "JDBC"
         # MatchCriteria: none		
         PhysicalConnectionRequirements:
-          AvailabilityZone: "ap-northeast-1"
+          AvailabilityZone: "ap-northeast-1a"
           SecurityGroupIdList: 
            - "sg-05133015a0cd6368e"
            - "sg-0083743756fb01768"
@@ -65,7 +65,7 @@ Resources:
     Properties:
       # Role: !Ref CFNIAMRoleName  
       Role: !Ref CFNIAMRoleName 
-      DefaultArguments: {'--job-language': 'scala'}  
+      DefaultArguments: {'--job-language': 'scala','--class':'GlueApp'}  
       # For example, if required by script, set temporary directory as DefaultArguments={'--TempDir'; 's3://aws-glue-temporary-xyc/sal'}
       Connections:
         Connections:
